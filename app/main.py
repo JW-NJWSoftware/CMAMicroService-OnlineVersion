@@ -4,7 +4,10 @@ import io
 import uuid
 import PyPDF2
 import PyPDF2
+import docx
+import docx2txt
 import nltk
+import re
 from heapq import nlargest
 from nltk.tokenize import sent_tokenize
 from nltk.corpus import stopwords
@@ -61,14 +64,59 @@ def verify_auth(authorization = Header(None), settings:Settings = Depends(get_se
         raise HTTPException(detail="Invalid authorization", status_code=401)
 
 def extract_text_from_pdf(file_path):
-    with open(file_path, 'rb') as pdf_file:
-        pdf_reader = PyPDF2.PdfReader(pdf_file)
-        num_pages = len(pdf_reader.pages)
-        text = ''
-        for page_num in range(num_pages):
-            page = pdf_reader.pages[page_num]
-            text += page.extract_text()
-    return text
+    try:
+        with open(file_path, 'rb') as pdf_file:
+            pdf_reader = PyPDF2.PdfReader(pdf_file)
+            num_pages = len(pdf_reader.pages)
+            text = ''
+            for page_num in range(num_pages):
+                page = pdf_reader.pages[page_num]
+                text += page.extract_text()
+
+        cleaned_text = re.sub(r'\t+', '', text)
+        cleaned_text = re.sub(r'\s+', ' ', cleaned_text)
+        cleaned_text = cleaned_text.strip()
+
+        sentences = cleaned_text.split('.')
+        cleaned_sentences = []
+        for sentence in sentences:
+            if len(sentence.strip()) >= 10 and sentence.strip()[0].isupper():
+                cleaned_sentences.append(sentence.strip())
+        cleaned_text = '. '.join(cleaned_sentences)
+            
+        return cleaned_text
+        
+    except FileNotFoundError:
+        print(f"File '{file_path}' not found.")
+        return None
+
+def extract_text_from_txt(file_path):
+    try:
+        with open(file_path, 'r') as file:
+            text = file.read()
+        return text
+    except FileNotFoundError:
+        print(f"File '{file_path}' not found.")
+        return None
+
+def extract_text_from_doc(file_path):
+    try:
+        # Convert file_path to string
+        file_path_str = str(file_path)
+        
+        if file_path_str.endswith('.docx'):
+            doc = docx.Document(file_path_str)
+            text = '\n'.join([para.text for para in doc.paragraphs])
+        elif file_path_str.endswith('.doc'):
+            text = docx2txt.process(file_path_str)
+        else:
+            print(f"Unsupported file format for '{file_path_str}'.")
+            return None
+
+        return text
+    except FileNotFoundError:
+        print(f"File '{file_path}' not found.")
+        return None
 
 def generate_text_summary(text):
     num_sentences=5
@@ -119,22 +167,43 @@ async def file_analysis_view(file:UploadFile = File(...), authorization = Header
 
     file_extension = str(fname).split('.')[-1].lower()
 
-    if file_extension == 'txt':
-        data = {"filetype":"Plain text document"}
-    elif file_extension == 'doc' or file_extension == 'docx':
-        data = {"filetype":"Word document"}
-    elif file_extension == 'pdf':
-        text = extract_text_from_pdf(dest)
-        summary = generate_text_summary(text)
-        data = {
-            "filetype":"PDF document",
-            "summary":summary,
-            "text":text
-            }
-    elif file_extension == 'rtf':
-        data = {"filetype":"Rich Text Format (RTF) document"}
-    else:
-        data = {"filetype":"Unknown"}
+    try:
+        if file_extension == 'txt':
+            text = extract_text_from_txt(dest)
+            summary = generate_text_summary(text)
+            data = {
+                "filetype":"Plain text document",
+                "summary":summary,
+                "text":text
+                }
+        elif file_extension == 'doc' or file_extension == 'docx':
+            text = extract_text_from_doc(dest)
+            summary = generate_text_summary(text)
+            data = {
+                "filetype":"Word document",
+                "summary":summary,
+                "text":text
+                }
+        elif file_extension == 'pdf':
+            text = extract_text_from_pdf(dest)
+            summary = generate_text_summary(text)
+            data = {
+                "filetype":"PDF document",
+                "summary":summary,
+                "text":text
+                }
+        else:
+            data = {
+                "filetype":"Unknown",
+                "summary":"Sorry, a summary cannot be generated for this file format"
+                }
+
+    # Delete the file from the uploads directory
+    finally:
+        try:
+            dest.unlink()  # Delete the file
+        except Exception as e:
+            print(f"Error deleting file: {e}")
 
     return data
 
