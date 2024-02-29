@@ -13,6 +13,4 @@ python-multipart
 aiofiles
 PyPDF2
 nltk
-re
 docx
-docx2txt
