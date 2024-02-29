@@ -4,8 +4,6 @@ import io
 import uuid
 import PyPDF2
 import PyPDF2
-import docx
-import docx2txt
 import nltk
 import re
 from heapq import nlargest
@@ -168,7 +166,7 @@ async def file_analysis_view(file:UploadFile = File(...), authorization = Header
         else:
             data = {
                 "filetype":"Unknown",
-                "summary":"Sorry, a summary cannot be generated for this file format"
+                "summary":"Sorry, a summary cannot be generated for this file format, this may not be a text format or may be a format only supported by your local instance of the application."
                 }
 
     # Delete the file from the uploads directory
