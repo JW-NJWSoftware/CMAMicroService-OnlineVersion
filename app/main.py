@@ -99,25 +99,6 @@ def extract_text_from_txt(file_path):
         print(f"File '{file_path}' not found.")
         return None
 
-def extract_text_from_doc(file_path):
-    try:
-        # Convert file_path to string
-        file_path_str = str(file_path)
-        
-        if file_path_str.endswith('.docx'):
-            doc = docx.Document(file_path_str)
-            text = '\n'.join([para.text for para in doc.paragraphs])
-        elif file_path_str.endswith('.doc'):
-            text = docx2txt.process(file_path_str)
-        else:
-            print(f"Unsupported file format for '{file_path_str}'.")
-            return None
-
-        return text
-    except FileNotFoundError:
-        print(f"File '{file_path}' not found.")
-        return None
-
 def generate_text_summary(text):
     num_sentences=5
     sentences = sent_tokenize(text)
@@ -173,14 +154,6 @@ async def file_analysis_view(file:UploadFile = File(...), authorization = Header
             summary = generate_text_summary(text)
             data = {
                 "filetype":"Plain text document",
-                "summary":summary,
-                "text":text
-                }
-        elif file_extension == 'doc' or file_extension == 'docx':
-            text = extract_text_from_doc(dest)
-            summary = generate_text_summary(text)
-            data = {
-                "filetype":"Word document",
                 "summary":summary,
                 "text":text
                 }

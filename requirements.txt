@@ -13,4 +13,3 @@ python-multipart
 aiofiles
 PyPDF2
 nltk
-docx
