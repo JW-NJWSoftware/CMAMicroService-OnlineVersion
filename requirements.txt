@@ -1,0 +1,15 @@
+fastapi
+gunicorn
+uvicorn
+jinja2
+pytest
+requests
+httpx
+pre-commit
+python-dotenv
+pydantic
+pydantic-settings
+python-multipart
+aiofiles
+PyPDF2
+nltk
